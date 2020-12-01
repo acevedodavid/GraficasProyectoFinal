@@ -8,14 +8,14 @@ class GForm {
         this.colorBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(c), gl.STATIC_DRAW);
-        
+
         this.vertices = v;
         this.colors = c;
         this.numVertices = v.length / 3;
     }
 
     draw() {
-        
+
         gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertices), gl.STATIC_DRAW);
         gl.vertexAttribPointer(attribs.positionLocation, 3, gl.FLOAT, false, 0, 0);
@@ -32,19 +32,19 @@ class GForm {
 
 class Fish {
 
-    constructor(centerX,centerY,centerZ) {
+    constructor(centerX, centerY, centerZ, speed, direction) {
         const vertexDataBody = [
-                              centerX, centerY, centerZ - 2, //body - back
+                              centerX, centerY, centerZ + 2, //body - back
                               centerX, centerY - 1, centerZ, //body - front bottom 
                               centerX, centerY + 1, centerZ, //body - front top
                               centerX, centerY - 1, centerZ, //head - back bottom
                               centerX, centerY + 1, centerZ, //head - back front
-                              centerX, centerY, centerZ + 1, //head - front
+                              centerX, centerY, centerZ - 1, //head - front
                               centerX, centerY + 0.5, centerZ + 0.5, //top fin - middle body
                               centerX, centerY + 1, centerZ, //top fin - front body
                               centerX, centerY + 1.2, centerZ + 1, //top fin - out
-                             ]; 
-        
+                             ];
+
         const vertexDataTail = [centerX, centerY, centerZ + 2, //front
                               centerX, centerY - 0.5, centerZ + 2.5, //back bottom
                               centerX, centerY + 0.5, centerZ + 2.5]; //back top
@@ -55,38 +55,40 @@ class Fish {
             colorDataBody.push(...faceColor);
             colorDataTail.push(...faceColor);
         }
-        
+
         this.vdb = [
-                      centerX, centerY, centerZ - 2, //body - back
-                      centerX, centerY - 1, centerZ, //body - front bottom 
-                      centerX, centerY + 1, centerZ, //body - front top
-                      centerX, centerY - 1, centerZ, //head - back bottom
-                      centerX, centerY + 1, centerZ, //head - back front
-                      centerX, centerY, centerZ + 1, //head - front
-                      centerX, centerY + 0.5, centerZ - 0.5, //top fin - middle body
-                      centerX, centerY + 1, centerZ, //top fin - front body
-                      centerX, centerY + 1.2, centerZ - 1, //top fin - out
-                     ]; 
+                  centerX, centerY, centerZ + 2, //body - back
+                  centerX, centerY - 1, centerZ, //body - front bottom 
+                  centerX, centerY + 1, centerZ, //body - front top
+                  centerX, centerY - 1, centerZ, //head - back bottom
+                  centerX, centerY + 1, centerZ, //head - back front
+                  centerX, centerY, centerZ - 1, //head - front
+                  centerX, centerY + 0.5, centerZ + 0.5, //top fin - middle body
+                  centerX, centerY + 1, centerZ, //top fin - front body
+                  centerX, centerY + 1.2, centerZ + 1, //top fin - out
+                 ];
         this.vdt = [centerX, centerY, centerZ + 2, //front
                     centerX, centerY - 0.5, centerZ + 2.5, //back bottom
                     centerX, centerY + 0.5, centerZ + 2.5]; //back top
-        
+        this.speed = speed;
+        this.direction = direction;
         this.body = new GForm(vertexDataBody, colorDataBody);
         this.tail = new GForm(vertexDataTail, colorDataTail);
     }
-    
+
     draw() {
         // No estoy seguro si hacer primero moveFish o moveTail
+        //this.moveFish();
         this.moveFish();
         //this.moveTail();
         this.body.draw();
         this.tail.draw();
     }
-    
+
     g(x) {
-        return ((2 * Math.abs((x % 2) - 1)) - 1);
+        return (2 * (Math.abs((x % 2) - 1)));
     }
-    
+
     degToCos(d) {
         return Math.cos(d * Math.PI / 180);
     }
@@ -94,11 +96,12 @@ class Fish {
     degToSin(d) {
         return Math.sin(d * Math.PI / 180);
     }
-    
+
     moveFish() {
-        let w = 5;
-        let cos = degToCos(w * t);
-        let sin = degToSin(w * t);
+        let w = this.speed;
+        let d = this.direction;
+        let cos = degToCos(w * t * d);
+        let sin = degToSin(w * t * d);
         //body
         for (let triangle = 0; triangle < 9; triangle++) {
             let x = triangle * 3;
@@ -106,16 +109,28 @@ class Fish {
             this.body.vertices[x] = (this.vdb[x] * cos) - (this.vdb[y] * sin);
             this.body.vertices[y] = (this.vdb[x] * sin) + (this.vdb[y] * cos);
         }
+        
+        //tail
+        // En las primeras dos se utiliza vdt porque no se hace update 
+        // a las coordenadas en moveTail()
+        this.tail.vertices[0] = (this.vdt[0] * cos) - (this.vdt[2] * sin);
+        this.tail.vertices[2] = (this.vdt[0] * sin) + (this.vdt[2] * cos);
+        this.tail.vertices[3] = (this.vdt[3] * cos) - (this.vdt[5] * sin);
+        this.tail.vertices[5] = (this.vdt[3] * sin) + (this.vdt[5] * cos);
+        this.tail.vertices[6] = (this.vdt[6] * cos) - (this.vdt[8] * sin);
+        this.tail.vertices[8] = (this.vdt[6] * sin) + (this.vdt[8] * cos);
     }
 
     moveTail() {
-        let x = Math.abs(degToCos((45) * this.g(t))) + degToSin((45) * this.g(t));
-        let y = degToSin((45) * this.g(t)) - degToCos((45) * this.g(t));
+        let a = 30;
+        let w = 0.9;
+        let x = degToCos((a) * this.g(w * t)) - degToSin((a) * this.g(w * t));
+        let y = degToSin((a) * this.g(w * t)) + degToCos((a) * this.g(w * t));
         //console.log(this.vertexDataTail[3]);
-        this.tail.vertices[3] = x;
-        this.tail.vertices[5] = y + 1;
-        this.tail.vertices[6] = x;
-        this.tail.vertices[8] = y + 1;
+        this.tail.vertices[3] += x * (-2.5 * degToSin(t));
+        this.tail.vertices[5] += y * (2.5 * degToCos(t));
+        this.tail.vertices[6] += x * (-2.5 *degToSin(t));
+        this.tail.vertices[8] += y * (2.5 * degToCos(t));
     }
 }
 
@@ -256,10 +271,19 @@ const attribs = {
     colorLocation: gl.getAttribLocation(program, `color`),
 };
 
+
+//------ OBJECT DECLARATION -------
 let myCube = new GForm(vertexData1, cubeColors[0]);
 let oceanFloor = new GForm(vertexDataOceanFloor, colorDataOceanFloor);
-let fish = new Fish(5,2,0);
-let fish2 = new Fish(7,2,0);
+let fishArray = [];
+for (let i = 0; i < 1; i++) {
+    //(x,y,z,speed,direction)
+    let fish = new Fish(randomIntFromInterval(3,10), randomIntFromInterval(1,10), 0, randomFloatFromInterval(3,10), -1);
+    fishArray.push(fish);
+}
+//let fish = new Fish(5, 2, 0, 5, -1);
+//let fish2 = new Fish(7, 3, 0, 6 ,-1);
+//let fish3 = new Fish(3, 1, 0, 3, -1);
 
 gl.useProgram(program);
 gl.enable(gl.DEPTH_TEST);
@@ -369,8 +393,9 @@ function animate() {
 
     myCube.draw();
     oceanFloor.draw();
-    fish.draw();
-    fish2.draw();
+    for(var i = 0; i < fishArray.length; i++) {
+        fishArray[i].draw();
+    }
     t += 0.1;
 }
 
@@ -391,4 +416,12 @@ function degToCos(d) {
 
 function degToSin(d) {
     return Math.sin(d * Math.PI / 180);
+}
+
+function randomIntFromInterval(min, max) { // min and max included 
+  return Math.floor(Math.random() * (max - min + 1) + min);
+}
+
+function randomFloatFromInterval(min, max) {
+    return Math.random() * (max - min + 1) + min;
 }

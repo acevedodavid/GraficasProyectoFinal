@@ -271,6 +271,8 @@ const attribs = {
     colorLocation: gl.getAttribLocation(program, `color`),
 };
 
+
+//------ OBJECT DECLARATION -------
 let myCube = new GForm(vertexData1, cubeColors[0]);
 let oceanFloor = new GForm(vertexDataOceanFloor, colorDataOceanFloor);
 let fishArray = [];
